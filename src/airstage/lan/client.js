@@ -658,6 +658,8 @@ class Client {
         const postSetParamValue = {};
         postSetParamValue[name] = value;
 
+        console.debug('[airstage-lan] HTTP POST http://' + hostname + '/SetParam device_id=' + deviceId + ' device_sub_id=' + deviceSubId + ' value=' + JSON.stringify(postSetParamValue));
+
         this._apiClient.postSetParam(
             hostname,
             deviceId,
@@ -665,8 +667,12 @@ class Client {
             postSetParamValue,
             (function(result) {
                 if (result.error) {
+                    console.error('[airstage-lan] HTTP SET /SetParam failed for ' + deviceId + ': ' + result.error);
+
                     return callback(result.error, null);
                 }
+
+                console.debug('[airstage-lan] HTTP SET /SetParam response for ' + deviceId + ': ' + JSON.stringify(result.response));
 
                 let deviceParameters = null;
 
@@ -833,6 +839,8 @@ class Client {
     _getDevicesFromApi(callback) {
         const deviceIds = this._getDeviceIds();
 
+        console.debug('[airstage-lan] Fetching parameters for ' + deviceIds.length + ' device(s): ' + JSON.stringify(deviceIds));
+
         this._getGivenDevicesFromApi(deviceIds, callback);
     }
 
@@ -842,17 +850,47 @@ class Client {
         if (deviceId === undefined) {
             const deviceParameters = this._getDeviceParameterCache(null);
 
+            console.debug('[airstage-lan] All device parameters fetched successfully');
+
             return callback(null, {
                 'parameters': deviceParameters
             });
         }
 
+        console.debug('[airstage-lan] Fetching parameters for device: ' + deviceId);
+
         this._getDeviceFromApi(
             deviceId,
             (function(error, result) {
                 if (error) {
-                    return callback(error, null);
+                    console.error('[airstage-lan] Error fetching parameters for device ' + deviceId + ': ' + error);
+                    // Continue to next device instead of failing entirely
+                    this._getGivenDevicesFromApi(deviceIds, callback);
+
+                    return;
                 }
+
+                console.debug('[airstage-lan] Successfully fetched parameters for device: ' + deviceId);
+
+                this._getGivenDevicesFromApi(deviceIds, callback);
+            }).bind(this)
+        );
+    }
+
+        console.debug('[airstage-lan] Fetching parameters for device: ' + deviceId);
+
+        this._getDeviceFromApi(
+            deviceId,
+            (function(error, result) {
+                if (error) {
+                    console.error('[airstage-lan] Error fetching parameters for device ' + deviceId + ': ' + error);
+                    // Continue to next device instead of failing entirely
+                    this._getGivenDevicesFromApi(deviceIds, callback);
+
+                    return;
+                }
+
+                console.debug('[airstage-lan] Successfully fetched parameters for device: ' + deviceId);
 
                 this._getGivenDevicesFromApi(deviceIds, callback);
             }).bind(this)
@@ -873,6 +911,8 @@ class Client {
             return callback('No hostname for device ID: ' + deviceId, null);
         }
 
+        console.debug('[airstage-lan] HTTP POST http://' + hostname + '/GetParam device_id=' + deviceId + ' device_sub_id=' + deviceSubId);
+
         let device = null;
         let deviceParameters = null;
 
@@ -886,8 +926,12 @@ class Client {
             constants.PARAMETER_NAMES_BESIDES_MODEL,
             (function(result) {
                 if (result.error) {
+                    console.error('[airstage-lan] HTTP GET /GetParam failed for ' + deviceId + ': ' + result.error);
+
                     return callback(result.error, null);
                 }
+
+                console.debug('[airstage-lan] HTTP GET /GetParam response for ' + deviceId + ' (first batch): ' + JSON.stringify(result.response));
 
                 if (result.response.value) {
                     device = {
@@ -904,6 +948,8 @@ class Client {
                     deviceParameters = this._setDeviceParameterCache(deviceId, device);
                 }
 
+                console.debug('[airstage-lan] HTTP POST http://' + hostname + '/GetParam device_id=' + deviceId + ' (model only)');
+
                 this._apiClient.postGetParam(
                     hostname,
                     deviceId,
@@ -911,8 +957,12 @@ class Client {
                     constants.PARAMETER_NAMES_ONLY_MODEL,
                     (function(result) {
                         if (result.error) {
+                            console.error('[airstage-lan] HTTP GET /GetParam failed for ' + deviceId + ' (model): ' + result.error);
+
                             return callback(result.error, null);
                         }
+
+                        console.debug('[airstage-lan] HTTP GET /GetParam response for ' + deviceId + ' (model): ' + JSON.stringify(result.response));
 
                         if (result.response.value) {
                             if (device === null) {

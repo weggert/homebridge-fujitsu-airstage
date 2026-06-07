@@ -66,7 +66,6 @@ class Client {
         let requestHeaders = structuredClone(constants.REQUEST_HEADERS_POST);
 
         requestHeaders[constants.REQUEST_HEADER_USER_AGENT] = this.userAgent;
-        requestHeaders[constants.REQUEST_HEADER_CONTENT_LENGTH] = requestBodyJson.length;
 
         requestOptions = {
             'hostname': hostname,
@@ -81,6 +80,13 @@ class Client {
 
     _makeHttpRequest(requestOptions, requestBodyJson, callback) {
         let result = structuredClone(constants.REQUEST_RESULT);
+        const url = 'http://' + requestOptions.hostname + requestOptions.path;
+
+        console.debug('[airstage-lan-http] ' + requestOptions.method + ' ' + url);
+        console.debug('[airstage-lan-http] Headers: ' + JSON.stringify(requestOptions.headers));
+        if (requestBodyJson) {
+            console.debug('[airstage-lan-http] Body: ' + requestBodyJson);
+        }
 
         const request = http.request(requestOptions, (response) => {
             result.statusCode = response.statusCode;
@@ -94,13 +100,20 @@ class Client {
                     result.response = JSON.parse(result.response);
                 }
 
+                console.debug('[airstage-lan-http] Response status: ' + result.statusCode);
+                if (result.response) {
+                    console.debug('[airstage-lan-http] Response body: ' + JSON.stringify(result.response));
+                }
+
                 callback(result);
             });
         }).on('error', (error) => {
             result.error = error;
+            console.error('[airstage-lan-http] Request error: ' + error.message);
             callback(result);
         }).on('timeout', () => {
             result.error = 'Request timeout';
+            console.error('[airstage-lan-http] Request timeout');
             callback(result);
 
             request.destroy();

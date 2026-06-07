@@ -138,57 +138,79 @@ class Platform {
     }
 
     _discoverAirstageLanDevices(callback = null) {
+        this.log.debug('Starting LAN device discovery...');
         this.airstageLanClient.getDevices(null, (function(error, devices) {
             if (error) {
+                this.log.error('Error when attempting to communicate with Airstage LAN:', error);
+
                 if (callback !== null) {
-                    callback(error);
+                    return callback(error);
                 }
 
-                return this.log.error('Error when attempting to communicate with Airstage LAN:', error);
+                return;
             }
 
             const deviceIds = Object.keys(devices.parameters);
             this.lanDeviceIds = deviceIds;
 
-            this._configureAirstageLanDevices(callback);
+            this.log.debug('LAN device discovery found ' + deviceIds.length + ' device(s): ' + JSON.stringify(deviceIds));
+
+            this._configureAirstageLanDevices(devices, callback);
         }).bind(this));
     }
 
-    _configureAirstageLanDevices(callback = null) {
-        this.airstageLanClient.getDevices(null, (function(error, devices) {
-            if (error) {
-                if (callback !== null) {
-                    callback(error);
-                }
+    _configureAirstageLanDevices(devices, callback = null) {
+        this.log.debug('Starting LAN device configuration...');
 
-                return this.log.error('Error when attempting to communicate with Airstage LAN:', error);
-            }
+        const deviceIds = Object.keys(devices.parameters);
+        this.log.debug('Configuring ' + deviceIds.length + ' LAN device(s)');
 
-            const deviceIds = Object.keys(devices.parameters);
+        let pending = deviceIds.length;
 
-            deviceIds.forEach(function(deviceId) {
-                const deviceParameters = devices.parameters[deviceId];
-
-                this.airstageLanClient.getName(deviceId, (function(error, deviceName) {
-                    if (error !== null) {
-                        this.log.error('Error when attempting to communicate with Airstage LAN:', error);
-                        // Fallback to using the device ID for the display name
-                        deviceName = deviceId;
-                    }
-
-                    const model = deviceParameters[airstage.constants.PARAMETER_MODEL] || 'Airstage';
-
-                    this._configureAirstageDevice(
-                        deviceId,
-                        deviceName,
-                        model
-                    );
-                }).bind(this));
-            }, this);
+        if (pending === 0) {
+            this.log.debug('No LAN devices to configure');
 
             if (callback !== null) {
                 callback(null);
             }
+
+            return;
+        }
+
+        deviceIds.forEach((function(deviceId) {
+            const deviceParameters = devices.parameters[deviceId];
+
+            this.log.debug('Configuring LAN device: ' + deviceId + ' (parameters: ' + JSON.stringify(deviceParameters) + ')');
+
+            this.airstageLanClient.getName(deviceId, (function(error, deviceName) {
+                if (error !== null) {
+                    this.log.error('Error when attempting to communicate with Airstage LAN:', error);
+                    // Fallback to using the device ID for the display name
+                    deviceName = deviceId;
+                }
+
+                this.log.debug('LAN device name resolved: ' + deviceId + ' -> ' + deviceName);
+
+                const model = deviceParameters[airstage.constants.PARAMETER_MODEL] || 'Airstage';
+
+                this.log.debug('Registering LAN accessory: deviceId=' + deviceId + ', name=' + deviceName + ', model=' + model);
+
+                this._configureAirstageDevice(
+                    deviceId,
+                    deviceName,
+                    model
+                );
+
+                this.log.debug('LAN accessory registered for: ' + deviceId);
+
+                pending--;
+
+                if (pending === 0 && callback !== null) {
+                    this.log.debug('All LAN devices configured (' + deviceIds.length + ' total)');
+
+                    callback(null);
+                }
+            }).bind(this));
         }).bind(this));
     }
 
