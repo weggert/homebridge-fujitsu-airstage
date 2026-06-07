@@ -714,15 +714,14 @@ class Client {
 
     getDevice(deviceId, callback) {
         const deviceFromCache = this._getDeviceFromCache(deviceId);
-        const isCacheHit = (
-            deviceFromCache.parameters !== null
-        );
 
-        if (isCacheHit) {
+        // Check if device is actually in the cache (not just that parameters exist)
+        if (deviceId in this._deviceParameterCache) {
             return callback(null, deviceFromCache);
         }
 
-        this._getDeviceFromApi(deviceId, callback);
+        // Device not in cache - return error immediately instead of hanging
+        return callback('Device not available: ' + deviceId, null);
     }
 
     resetDeviceCache(deviceId = null) {
@@ -856,26 +855,6 @@ class Client {
                 'parameters': deviceParameters
             });
         }
-
-        console.debug('[airstage-lan] Fetching parameters for device: ' + deviceId);
-
-        this._getDeviceFromApi(
-            deviceId,
-            (function(error, result) {
-                if (error) {
-                    console.error('[airstage-lan] Error fetching parameters for device ' + deviceId + ': ' + error);
-                    // Continue to next device instead of failing entirely
-                    this._getGivenDevicesFromApi(deviceIds, callback);
-
-                    return;
-                }
-
-                console.debug('[airstage-lan] Successfully fetched parameters for device: ' + deviceId);
-
-                this._getGivenDevicesFromApi(deviceIds, callback);
-            }).bind(this)
-        );
-    }
 
         console.debug('[airstage-lan] Fetching parameters for device: ' + deviceId);
 
