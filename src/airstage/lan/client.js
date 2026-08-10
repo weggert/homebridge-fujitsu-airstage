@@ -8,10 +8,12 @@ class Client {
     constructor(
         localDevices,
         temperatureScalePreference,
-        userAgent = null
+        userAgent = null,
+        logger = null
     ) {
         this.localDevices = localDevices;
         this.temperatureScalePreference = temperatureScalePreference;
+        this._logger = logger;
 
         this._apiClient = new api.Client(
             userAgent || null
@@ -183,6 +185,15 @@ class Client {
                 if (parameterValue !== null) {
                     result = this._indoorIntValueToTemperature(parameterValue);
 
+                    if (scale === constants.TEMPERATURE_SCALE_CELSIUS) {
+                        const fahrenheit = Math.round(result * 1.8 + 32);
+                        if (fahrenheit >= 82) {
+                            result = result + 1.0;
+                        } else if (fahrenheit >= 73) {
+                            result = result + 0.5;
+                        }
+                    }
+
                     if (scale === constants.TEMPERATURE_SCALE_FAHRENHEIT) {
                         result = this._celsiusToFahrenheit(result);
                     }
@@ -206,6 +217,15 @@ class Client {
 
                 result = this._intValueToTemperature(parameterValue);
 
+                if (scale === constants.TEMPERATURE_SCALE_CELSIUS) {
+                    const fahrenheit = Math.round(result * 1.8 + 32);
+                    if (fahrenheit >= 82) {
+                        result = result + 1.0;
+                    } else if (fahrenheit >= 73) {
+                        result = result + 0.5;
+                    }
+                }
+
                 if (scale === constants.TEMPERATURE_SCALE_FAHRENHEIT) {
                     result = this._celsiusToFahrenheit(result);
                 }
@@ -225,6 +245,12 @@ class Client {
                 temperature,
                 constants.TEMPERATURE_SCALE_CELSIUS
             );
+            const fahrenheit = Math.round(temperature * 1.8 + 32);
+            if (fahrenheit >= 82) {
+                temperature = temperature - 1.0;
+            } else if (fahrenheit >= 73) {
+                temperature = temperature - 0.5;
+            }
         }
 
         intValue = this._temperatureToIntValue(temperature);
@@ -245,11 +271,19 @@ class Client {
                     parameterValue = device.parameters[constants.PARAMETER_SET_TEMPERATURE];
                     result = this._intValueToTemperature(parameterValue);
 
+                    if (scale === constants.TEMPERATURE_SCALE_CELSIUS) {
+                        const fahrenheit = Math.round(result * 1.8 + 32);
+                        if (fahrenheit >= 82) {
+                            result = result + 1.0;
+                        } else if (fahrenheit >= 73) {
+                            result = result + 0.5;
+                        }
+                    }
+
                     if (scale === constants.TEMPERATURE_SCALE_FAHRENHEIT) {
                         result = this._celsiusToFahrenheit(result);
                     }
                 }
-
                 callback(null, result);
             }).bind(this)
         );

@@ -46,7 +46,8 @@ class Platform {
                 null,
                 tokens.accessToken || null,
                 tokens.accessTokenExpiry || null,
-                tokens.refreshToken || null
+                tokens.refreshToken || null,
+                this.log
             );
 
             if (withSetInterval) {
@@ -69,7 +70,9 @@ class Platform {
         if (this.config.enableLanControl) {
             this.airstageLanClient = new airstage.lan.Client(
                 this.config.lanDevices || [],
-                this.config.lanTemperatureScale
+                this.config.lanTemperatureScale,
+                null,
+                this.log
             );
 
             if (withSetInterval) {

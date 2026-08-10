@@ -678,11 +678,16 @@ class HeaterCoolerAccessory extends Accessory {
                     this.deviceId,
                     targetTemperature,
                     airstage.constants.TEMPERATURE_SCALE_CELSIUS,
-                    (function (error) {
+                    (function (error, result) {
                         if (error) {
                             this._logMethodCallResult(methodName, error);
 
                             return callback(error);
+                        }
+
+                        if (result !== null) {
+                            const deviceTempF = (result * 1.8 + 32).toFixed(1);
+                            this.platform.log.info(`[TEMP DEBUG] HeaterCooler device accepted: ${result}°C (${deviceTempF}°F) - snapped from ${targetTemperature}°C`);
                         }
 
                         this._logMethodCallResult(methodName, null, null);

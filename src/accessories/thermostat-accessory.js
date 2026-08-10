@@ -301,15 +301,23 @@ class ThermostatAccessory extends Accessory {
 
         this._logMethodCall(methodName, value);
 
+        const homekitTempF = (value * 1.8 + 32).toFixed(1);
+        this.platform.log.info(`[TEMP DEBUG] HomeKit sent: ${value}°C (${homekitTempF}°F)`);
+
         this.airstageClient.setTargetTemperature(
             this.deviceId,
             value,
             airstage.constants.TEMPERATURE_SCALE_CELSIUS,
-            (function (error) {
+            (function (error, result) {
                 if (error) {
                     this._logMethodCallResult(methodName, error);
 
                     return callback(error);
+                }
+
+                if (result !== null) {
+                    const deviceTempF = (result * 1.8 + 32).toFixed(1);
+                    this.platform.log.info(`[TEMP DEBUG] Device accepted: ${result}°C (${deviceTempF}°F) - snapped from ${value}°C`);
                 }
 
                 this._logMethodCallResult(methodName, null, null);
